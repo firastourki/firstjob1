@@ -9,7 +9,8 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/firastourki/firstjob1.git'
+                git branch: 'main',
+                    url: 'https://github.com/firastourki/firstjob1.git'
             }
         }
 
@@ -27,13 +28,13 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh "echo \"$DOCKER_PASS\" | docker login -u \"$DOCKER_USER\" --password-stdin"
-                    sh "docker push ${IMAGE_NAME}:latest"
+                withCredentials([
+                    string(credentialsId: 'dockerhub-token', variable: 'DOCKERHUB_TOKEN')
+                ]) {
+                    sh '''
+                        echo "$DOCKERHUB_TOKEN" | docker login -u firastourki --password-stdin
+                        docker push firastourki/firstjob1:latest
+                    '''
                 }
             }
         }
