@@ -27,14 +27,18 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Docker Login & Push') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'dockerhub-token', variable: 'DOCKERHUB_TOKEN')
+                    usernamePassword(
+                        credentialsId: 'dockerhub-token',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_TOKEN'
+                    )
                 ]) {
                     sh '''
-                        echo "$DOCKERHUB_TOKEN" | docker login -u firastourki --password-stdin
-                        docker push firastourki/firstjob1:latest
+                        echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${IMAGE_NAME}:latest
                     '''
                 }
             }
@@ -42,9 +46,8 @@ pipeline {
 
         stage('Archive Artifact') {
             steps {
-                archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
     }
 }
-
