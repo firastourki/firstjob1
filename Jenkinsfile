@@ -7,12 +7,18 @@ pipeline {
 
     stages {
 
+        /* ============================
+           📥 CHECKOUT CODE
+           ============================ */
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/firastourki/firstjob1.git'
             }
         }
 
+        /* ============================
+           🧱 BUILD MAVEN
+           ============================ */
         stage('Build Maven') {
             steps {
                 sh 'chmod +x mvnw'
@@ -26,29 +32,41 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh '''
-                        ./mvnw sonar:sonar \
-                        -Dsonar.projectKey=student-management \
-                        -Dsonar.projectName=student-management \
-                        -Dsonar.host.url=http://localhost:9000
-                    '''
+                    withCredentials([
+                        string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')
+                    ]) {
+                        sh '''
+                            ./mvnw sonar:sonar \
+                            -Dsonar.projectKey=student-management \
+                            -Dsonar.projectName=student-management \
+                            -Dsonar.login=$SONAR_TOKEN
+                        '''
+                    }
                 }
             }
         }
 
+        /* ============================
+           🐳 BUILD DOCKER IMAGE
+           ============================ */
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t ${IMAGE_NAME}:latest ."
             }
         }
 
+        /* ============================
+           🚀 DOCKER LOGIN & PUSH
+           ============================ */
         stage('Docker Login & Push') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push ${IMAGE_NAME}:latest
@@ -57,10 +75,25 @@ pipeline {
             }
         }
 
+        /* ============================
+           📦 ARCHIVE JAR
+           ============================ */
         stage('Archive Artifact') {
             steps {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
+        }
+    }
+
+    /* ============================
+       🧹 POST ACTIONS
+       ============================ */
+    post {
+        success {
+            echo '✅ Pipeline terminé avec succès'
+        }
+        failure {
+            echo '❌ Pipeline échoué'
         }
     }
 }
