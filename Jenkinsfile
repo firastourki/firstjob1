@@ -20,6 +20,22 @@ pipeline {
             }
         }
 
+        /* ============================
+           🔍 SONARQUBE ANALYSIS
+           ============================ */
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        ./mvnw sonar:sonar \
+                        -Dsonar.projectKey=student-management \
+                        -Dsonar.projectName=student-management \
+                        -Dsonar.host.url=http://localhost:9000
+                    '''
+                }
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t ${IMAGE_NAME}:latest ."
